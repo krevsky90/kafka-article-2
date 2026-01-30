@@ -18,7 +18,7 @@ cd kafka-article-2
 ```
 2. Запустить Kafka-кластер
 ```bash
-docker-compose up -d
+docker compose up -d
 ```
 3. Запустить микросервисы (при желании можно запускать консьюмеров в нескольких инстансах)
 ```bash
@@ -29,10 +29,10 @@ cd inventory-service
 ./mvnw spring-boot:run
 
 cd notification-service
-./mvnw spring-boot:run -Dserver.port=8081
+./mvnw spring-boot:run
 
 cd analytics-service
-./mvnw spring-boot:run -Dserver.port=8082
+./mvnw spring-boot:run
 ```
 4. Открыть Kafka-UI по адресу http://localhost:8086/
 5. Работать с отправкой сообщений
