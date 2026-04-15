@@ -1,0 +1,13 @@
+открыл порт наружу только для order-service, чтобы присылать заявки извне
+###
+POST http://localhost:8081/api/order
+Content-Type: application/json
+
+{
+  "email": "krevsky@gmail.com",
+  "productName": "Tablet",
+  "quantity": 1
+}
+
+остальные сервисы НЕ имеют открытых портов, т.е. видят друг друга только внутри сети докер!
+
