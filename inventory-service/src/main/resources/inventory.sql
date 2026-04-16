@@ -1,4 +1,4 @@
-CREATE TABLE inventory
+CREATE TABLE IF NOT EXISTS inventory
 (
     id           BIGSERIAL PRIMARY KEY,
     product_name VARCHAR(256) NOT NULL UNIQUE,
@@ -9,3 +9,9 @@ INSERT INTO inventory (product_name, quantity)
 VALUES ('Smartphone', 5),
        ('Tablet', 10),
        ('Desktop', 6);
+
+CREATE TABLE IF NOT EXISTS processed_order_id
+(
+    order_id varchar(36) primary key,
+    processed_at timestamp default now()
+);

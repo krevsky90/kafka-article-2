@@ -2,10 +2,13 @@ package io.mitochondria.inventory.service;
 
 import io.mitochondria.inventory.event.InventoryRejectedEvent;
 import io.mitochondria.inventory.event.InventoryReservedEvent;
+import io.mitochondria.inventory.model.ProcessedOrderId;
 import io.mitochondria.inventory.repository.InventoryRepository;
+import io.mitochondria.inventory.repository.ProcessedOrderIdRepository;
 import io.mitochondria.order.event.OrderPlacedEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.support.KafkaHeaders;
@@ -22,10 +25,12 @@ import java.util.concurrent.CompletableFuture;
 public class InventoryService {
     private static final Logger logger = LoggerFactory.getLogger(InventoryService.class);
     private final InventoryRepository inventoryRepository;
+    private final ProcessedOrderIdRepository processedOrderIdRepository;
     private final KafkaTemplate<String, Object> kafkaTemplate;
 
-    public InventoryService(InventoryRepository inventoryRepository, KafkaTemplate<String, Object> kafkaTemplate) {
+    public InventoryService(InventoryRepository inventoryRepository, ProcessedOrderIdRepository processedOrderIdRepository, KafkaTemplate<String, Object> kafkaTemplate) {
         this.inventoryRepository = inventoryRepository;
+        this.processedOrderIdRepository = processedOrderIdRepository;
         this.kafkaTemplate = kafkaTemplate;
     }
 
@@ -39,6 +44,14 @@ public class InventoryService {
                         " | Partition: " + partition +
                         " | Order: " + orderPlacedEvent.orderId()
         );
+
+        //deduplication check
+        try {
+            processedOrderIdRepository.save(new ProcessedOrderId(orderPlacedEvent.orderId()));
+        } catch (DataIntegrityViolationException ex) {
+            logger.info("Order {} already processed", orderPlacedEvent.orderId());
+            return;
+        }
 
         int count = inventoryRepository.deductStock(orderPlacedEvent.productName(), orderPlacedEvent.quantity());
         if (count > 0) {
