@@ -1,9 +1,12 @@
 package io.mitochondria.inventory.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.mitochondria.inventory.event.InventoryRejectedEvent;
 import io.mitochondria.inventory.event.InventoryReservedEvent;
+import io.mitochondria.inventory.model.OutboxEvent;
 import io.mitochondria.inventory.model.ProcessedOrderId;
 import io.mitochondria.inventory.repository.InventoryRepository;
+import io.mitochondria.inventory.repository.OutboxEventRepository;
 import io.mitochondria.inventory.repository.ProcessedOrderIdRepository;
 import io.mitochondria.order.event.OrderPlacedEvent;
 import org.slf4j.Logger;
@@ -12,26 +15,28 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.support.KafkaHeaders;
-import org.springframework.kafka.support.SendResult;
 import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.util.concurrent.CompletableFuture;
 
 @Service
 public class InventoryService {
     private static final Logger logger = LoggerFactory.getLogger(InventoryService.class);
     private final InventoryRepository inventoryRepository;
     private final ProcessedOrderIdRepository processedOrderIdRepository;
+    private final OutboxEventRepository outboxEventRepository;
     private final KafkaTemplate<String, Object> kafkaTemplate;
+    private final ObjectMapper objectMapper;
 
-    public InventoryService(InventoryRepository inventoryRepository, ProcessedOrderIdRepository processedOrderIdRepository, KafkaTemplate<String, Object> kafkaTemplate) {
+    public InventoryService(InventoryRepository inventoryRepository, ProcessedOrderIdRepository processedOrderIdRepository, OutboxEventRepository outboxEventRepository, KafkaTemplate<String, Object> kafkaTemplate, ObjectMapper objectMapper) {
         this.inventoryRepository = inventoryRepository;
         this.processedOrderIdRepository = processedOrderIdRepository;
+        this.outboxEventRepository = outboxEventRepository;
         this.kafkaTemplate = kafkaTemplate;
+        this.objectMapper = objectMapper;
     }
 
     // NOTE: @Transactional is MANDATORY since reserveInventory calls inventoryRepository.deductStock,
@@ -54,30 +59,30 @@ public class InventoryService {
         }
 
         int count = inventoryRepository.deductStock(orderPlacedEvent.productName(), orderPlacedEvent.quantity());
-        if (count > 0) {
-            InventoryReservedEvent inventoryReservedEvent = new InventoryReservedEvent(
-                    orderPlacedEvent.orderId(),
-                    orderPlacedEvent.email()
-            );
+        String topic = count > 0 ? "inventory-reserved" : "inventory-rejected";
+        Object event = count > 0 ?
+                new InventoryReservedEvent(
+                        orderPlacedEvent.orderId(),
+                        orderPlacedEvent.email()
+                ) :
+                new InventoryRejectedEvent(
+                        orderPlacedEvent.orderId(),
+                        orderPlacedEvent.email()
+                );
 
-            kafkaTemplate.send("inventory-reserved", inventoryReservedEvent.orderID(), inventoryReservedEvent);
-        } else {
-
-            InventoryRejectedEvent inventoryRejectedEvent = new InventoryRejectedEvent(
-                    orderPlacedEvent.orderId(),
-                    orderPlacedEvent.email()
-            );
-
-            CompletableFuture<SendResult<String, Object>> future =
-                    kafkaTemplate.send("inventory-rejected", inventoryRejectedEvent.orderID(), inventoryRejectedEvent);
-
-            future.whenComplete((result, throwable) -> {
-                if (throwable != null) {
-                    logger.info("Error sending inventory rejected event in thread {}", Thread.currentThread().getName());
-                } else {
-                    logger.info("Success sending inventory rejected event in thread {}", Thread.currentThread().getName());
-                }
-            });
+        String eventAsString;
+        try {
+            eventAsString = objectMapper.writeValueAsString(event);
+        } catch (Exception e) {
+            throw new RuntimeException("Serialization failed for order: " + orderPlacedEvent.orderId(), e);
         }
+
+        OutboxEvent outboxEvent = new OutboxEvent(
+                orderPlacedEvent.orderId(),
+                topic,
+                eventAsString
+        );
+
+        outboxEventRepository.save(outboxEvent);
     }
 }

@@ -11,6 +11,38 @@ Content-Type: application/json
 
 остальные сервисы НЕ имеют открытых портов, т.е. видят друг друга только внутри сети докер!
 
+---------------
+Идемпотентность для продюсера:
+# ADD PRODUCER IDEMPOTENCY
+# 0   - at-most once
+# 1   - at-least once
+# all - at-least once, all is MANDATORY for idempotency!
+spring.kafka.producer.acks=all
+# based on ProducerId + ProducerEpoch (is incremented when producer is re-created) + sequenceNumber (number of message sent by this producer)
+# if true => sets transactional.id - broker assigns unique ProducerId + ProducerEpoch to the producer
+# example from logs:
+# 2026-04-16T14:40:25.884Z " INFO [inventory-service]" 1 --- [inventory-service] [vice-producer-1] o.a.k.c.p.internals.TransactionManager   : [Producer clientId=inventory-service-producer-1] ProducerId set to 12000 with epoch 0
+spring.kafka.producer.properties.enable.idempotence=true
+# how many times producer sends message without getting ack. has to be > 0
+spring.kafka.producer.retries=2147483647
+# max amount of messages that producer can send before getting ack regarding some of these messages. needs to be <= 5
+spring.kafka.producer.properties.max.in.flight.requests.per.connection=5
+
+Идемпотентность для консюмера:
+создать таблицу processed_order_id в постгресе и пытаться сохранить в нее order_id.
+если не получилось из-за DataIntegrityViolationException, то такое сообщение УЖЕ обработано (т.к. над методом консюмера аннотация @Transactional)
+
+Идемпотентность для сервиса, к-ый и консюмер, и продюсер:
+МЕТОД outbox pattern:
+1) в методе консюмера ТРАНЗАКЦИОННО:
+    - проверка на дедупликацию
+    - бизнес логика
+    - сохранение сообщения в outbox_events таблицу в БД (для дальнейшей пересылки в роли продюсера)
+2) в сервисе консюмера добавить бин с @Scheduled-методом, к-ый берет не отправленные эвенты из outbox_events и пытается их отправить в роли продюсера (at-least once)
+    отправка д б СИНХРОННОЙ! иначе если сообщение в кафка не пришло, но шедулер-бин пометил сообщение в outbox_events как отправленное, то оно не будет переотправляться => потеряется
++ добавить @EnableScheduling в главный класс сервиса
+
+
 Мавен команды:
 1) чтобы собрать отдельно модуль мультимодульного приложения:
     mvn clean package -pl inventory-service,someOtherModule (-am)
