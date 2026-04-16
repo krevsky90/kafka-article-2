@@ -4,19 +4,17 @@ import io.mitochondria.inventory.event.InventoryRejectedEvent;
 import io.mitochondria.inventory.event.InventoryReservedEvent;
 import io.mitochondria.inventory.repository.InventoryRepository;
 import io.mitochondria.order.event.OrderPlacedEvent;
-import org.apache.kafka.clients.producer.ProducerRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.kafka.support.KafkaHeaders;
 import org.springframework.kafka.support.SendResult;
+import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
-import java.time.Month;
-import java.time.ZoneOffset;
-import java.util.Random;
-import java.util.UUID;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.concurrent.CompletableFuture;
 
 @Service
@@ -31,7 +29,13 @@ public class InventoryService {
     }
 
     @KafkaListener(topics = "order-placed")
-    public void reserveInventory(OrderPlacedEvent orderPlacedEvent) {
+    public void reserveInventory(OrderPlacedEvent orderPlacedEvent, @Header(KafkaHeaders.RECEIVED_PARTITION) int partition) throws UnknownHostException {
+        System.out.println(
+                "Instance: " + InetAddress.getLocalHost().getHostName() +
+                        " | Partition: " + partition +
+                        " | Order: " + orderPlacedEvent.orderId()
+        );
+
         try {
             inventoryRepository.deductStock(orderPlacedEvent);
 

@@ -124,6 +124,15 @@ services:
       - kafka-1
       - kafka-2
 
+  krev-service:
+    build: ./krev-service
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+    depends_on:
+      - kafka-0
+      - kafka-1
+      - kafka-2
+
   analytics-service:
     build: ./analytics-service
     environment:

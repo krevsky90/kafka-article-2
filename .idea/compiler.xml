@@ -9,6 +9,7 @@
         <module name="analytics-service" />
         <module name="order-service" />
         <module name="inventory-service" />
+        <module name="krev-service" />
         <module name="notification-service" />
       </profile>
     </annotationProcessing>
@@ -17,6 +18,7 @@
     <option name="ADDITIONAL_OPTIONS_OVERRIDE">
       <module name="analytics-service" options="-parameters" />
       <module name="inventory-service" options="-parameters" />
+      <module name="krev-service" options="-parameters" />
       <module name="notification-service" options="-parameters" />
       <module name="order-service" options="-parameters" />
     </option>
