@@ -12,6 +12,7 @@ import org.springframework.kafka.support.KafkaHeaders;
 import org.springframework.kafka.support.SendResult;
 import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
@@ -28,6 +29,9 @@ public class InventoryService {
         this.kafkaTemplate = kafkaTemplate;
     }
 
+    // NOTE: @Transactional is MANDATORY since reserveInventory calls inventoryRepository.deductStock,
+    // that uses JPA that needs existing transaction!
+    @Transactional
     @KafkaListener(topics = "order-placed")
     public void reserveInventory(OrderPlacedEvent orderPlacedEvent, @Header(KafkaHeaders.RECEIVED_PARTITION) int partition) throws UnknownHostException {
         System.out.println(
@@ -36,30 +40,28 @@ public class InventoryService {
                         " | Order: " + orderPlacedEvent.orderId()
         );
 
-        try {
-            inventoryRepository.deductStock(orderPlacedEvent);
-
+        int count = inventoryRepository.deductStock(orderPlacedEvent.productName(), orderPlacedEvent.quantity());
+        if (count > 0) {
             InventoryReservedEvent inventoryReservedEvent = new InventoryReservedEvent(
-                orderPlacedEvent.orderId(),
-                orderPlacedEvent.email()
+                    orderPlacedEvent.orderId(),
+                    orderPlacedEvent.email()
             );
 
             kafkaTemplate.send("inventory-reserved", inventoryReservedEvent.orderID(), inventoryReservedEvent);
-        }
-        catch (Exception e) {
+        } else {
+
             InventoryRejectedEvent inventoryRejectedEvent = new InventoryRejectedEvent(
-                orderPlacedEvent.orderId(),
-                orderPlacedEvent.email()
+                    orderPlacedEvent.orderId(),
+                    orderPlacedEvent.email()
             );
 
             CompletableFuture<SendResult<String, Object>> future =
-                kafkaTemplate.send("inventory-rejected", inventoryRejectedEvent.orderID(), inventoryRejectedEvent);
+                    kafkaTemplate.send("inventory-rejected", inventoryRejectedEvent.orderID(), inventoryRejectedEvent);
 
             future.whenComplete((result, throwable) -> {
                 if (throwable != null) {
                     logger.info("Error sending inventory rejected event in thread {}", Thread.currentThread().getName());
-                }
-                else {
+                } else {
                     logger.info("Success sending inventory rejected event in thread {}", Thread.currentThread().getName());
                 }
             });

@@ -10,6 +10,7 @@ Content-Type: application/json
 }
 
 остальные сервисы НЕ имеют открытых портов, т.е. видят друг друга только внутри сети докер!
+
 Мавен команды:
 1) чтобы собрать отдельно модуль мультимодульного приложения:
     mvn clean package -pl inventory-service,someOtherModule (-am)
