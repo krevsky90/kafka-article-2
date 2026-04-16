@@ -31,7 +31,7 @@ public class InventoryReplayerScheduler {
 
     @Scheduled(fixedDelay = 5000)
     public void replayOutboxEvents() {
-        List<OutboxEvent> events = outboxEventRepository.findOutboxEventsBySentFalseAndCreatedAtAsc(PageRequest.of(0, 100));
+        List<OutboxEvent> events = outboxEventRepository.findBySentFalseOrderByCreatedAtAsc(PageRequest.of(0, 100));
         for (OutboxEvent event : events) {
             try {
                 String topic = event.getTopic();
@@ -41,7 +41,7 @@ public class InventoryReplayerScheduler {
                         ? objectMapper.readValue(payloadJson, InventoryReservedEvent.class)
                         : objectMapper.readValue(payloadJson, InventoryRejectedEvent.class);
 
-                kafkaTemplate.send(event.getKey(), topic, payload).get();  //NOTE! sync mode to be 100% ensure that message is acked by kafka
+                kafkaTemplate.send(topic, event.getKey(), payload).get();  //NOTE! sync mode to be 100% ensure that message is acked by kafka
 
                 //mark event as sent
                 event.setSent(true);

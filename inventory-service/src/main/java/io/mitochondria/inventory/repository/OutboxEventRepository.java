@@ -9,5 +9,5 @@ import java.util.List;
 
 @Repository
 public interface OutboxEventRepository extends JpaRepository<OutboxEvent, String> {
-    List<OutboxEvent> findOutboxEventsBySentFalseAndCreatedAtAsc(Pageable pageable);
+    List<OutboxEvent> findBySentFalseOrderByCreatedAtAsc(Pageable pageable);
 }
