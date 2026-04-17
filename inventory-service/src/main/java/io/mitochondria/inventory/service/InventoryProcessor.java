@@ -3,6 +3,8 @@ package io.mitochondria.inventory.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.mitochondria.inventory.event.InventoryRejectedEvent;
 import io.mitochondria.inventory.event.InventoryReservedEvent;
+import io.mitochondria.inventory.exception.NonRetryableException;
+import io.mitochondria.inventory.exception.RetryableException;
 import io.mitochondria.inventory.model.OutboxEvent;
 import io.mitochondria.inventory.model.ProcessedOrderId;
 import io.mitochondria.inventory.repository.InventoryRepository;
@@ -42,7 +44,12 @@ public class InventoryProcessor {
             return;
         }
 
-        int count = inventoryRepository.deductStock(orderPlacedEvent.productName(), orderPlacedEvent.quantity());
+        int count;
+        try {
+            count = inventoryRepository.deductStock(orderPlacedEvent.productName(), orderPlacedEvent.quantity());
+        } catch (Exception ex) {
+            throw new RetryableException("Database error", ex);
+        }
         String topic = count > 0 ? "inventory-reserved" : "inventory-rejected";
         Object event = count > 0 ?
                 new InventoryReservedEvent(
@@ -58,7 +65,7 @@ public class InventoryProcessor {
         try {
             eventAsString = objectMapper.writeValueAsString(event);
         } catch (Exception e) {
-            throw new RuntimeException("Serialization failed for order: " + orderPlacedEvent.orderId(), e);
+            throw new NonRetryableException("Serialization failed for order: " + orderPlacedEvent.orderId(), e);
         }
 
         OutboxEvent outboxEvent = new OutboxEvent(
@@ -67,6 +74,10 @@ public class InventoryProcessor {
                 eventAsString
         );
 
-        outboxEventRepository.save(outboxEvent);
+        try {
+            outboxEventRepository.save(outboxEvent);
+        } catch (Exception e) {
+            throw new RetryableException("Failed to save outbox event", e);
+        }
     }
 }

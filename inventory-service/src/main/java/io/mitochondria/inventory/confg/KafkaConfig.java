@@ -1,5 +1,7 @@
 package io.mitochondria.inventory.confg;
 
+import io.mitochondria.inventory.exception.NonRetryableException;
+import io.mitochondria.inventory.exception.RetryableException;
 import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.config.TopicConfig;
@@ -66,6 +68,8 @@ public class KafkaConfig {
         );
 
         DefaultErrorHandler handler = new DefaultErrorHandler(recoverer, new FixedBackOff(3000, 3));
+        handler.addRetryableExceptions(RetryableException.class);
+        handler.addNotRetryableExceptions(NonRetryableException.class);
 
         return handler;
     }

@@ -104,6 +104,24 @@ info: https://habr.com/ru/articles/989608/
     где указываем, в какой топик идет проблемное сообщение
 4) создаем dlt-processor-service, слушающий все dlt-топики и что-то делающий с их сообщениями
 
+Как проверить:
+    отправить кривое сообщение (через kafka-ui) в order-placed и убедиться, что
+    - это сообщение в order-placed и в order-placed-dlt
+    - это сообщение залоггировано в dlt-processor-service
+    - этого сообщения нет в processed_order_id таблице inventory_db
+
+Добавить Retryable и NonRetryable исключения - свои классы:
+    RetryableException → инфраструктурные проблемы (DB, сеть)
+    NonRetryableException → данные/логика (сериализация, invalid payload)
+    тогда
+    если вылетело RetryableException, то будут ретраи согласно настройкам в FixedBackOff
+        если не поможет - сообщение отправляется в DLT
+    если вылетело NonRetryableException, то сообщение СРАЗУ отправляется в DLT
+
+NOTE: по умолчанию все исключения кафка считает retryable
+
+
+
 ========================
 
 Мавен команды:
