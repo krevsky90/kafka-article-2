@@ -42,6 +42,48 @@ spring.kafka.producer.properties.max.in.flight.requests.per.connection=5
     отправка д б СИНХРОННОЙ! иначе если сообщение в кафка не пришло, но шедулер-бин пометил сообщение в outbox_events как отправленное, то оно не будет переотправляться => потеряется
 + добавить @EnableScheduling в главный класс сервиса
 
+=== ОФФСЕТЫ ===
+info: https://habr.com/ru/articles/965218/
+типы коммитов:
+1) авто-коммит - по умолчанию
+2) ручной:
+    BATCH
+    RECORD
+    MANUAL
+    MANUAL_IMMEDIATE
+для этого надо проставить spring.kafka.listener.ack-mode в application.properties консюмера.
++ надо отключить spring.kafka.consumer.enable-auto-commit
+
+По типу синхронности:
+1) Синхронный
+2) Асинхронный
+
+NOTE: Spring Boot по умолчанию использует для автокоммита асинхронный режим, а для ручных коммитов — синхронный.
+
+ПРОБЛЕМА: в InventoryService происходит коммит в БД и коммит оффсета.
+    Чтобы не было ситуации "оффсет закоммичен, но коммит в БД упал", НЕ НАДО вешать обе аннотации @KafkaListener и @Transactional на один метод.
+РЕШЕНИЕ:
+    НАДО, чтобы коммит оффсета был строго ПОСЛЕ коммита в БД.
+    Для этого создаем отдельный метод с @Transactional в ОТДЕЛЬНОМ (!) бине (из-за особенностей спринга)
+    и вызываем его в методе с @KafkaListener.
+
+    ИЛИ все в одном классе-листенере
+        import org.springframework.transaction.support.TransactionTemplate;
+
+        private final TransactionTemplate transactionTemplate;
+
+        @KafkaListener(topics = "order-placed")
+        public void reserveInventory(OrderPlacedEvent orderPlacedEvent) {
+            transactionTemplate.executeWithoutResult(status -> {
+                processOrderInTransaction(orderPlacedEvent);
+            });
+        }
+
+        private void processOrderInTransaction(OrderPlacedEvent orderPlacedEvent) {
+            ...
+        }
+
+========================
 
 Мавен команды:
 1) чтобы собрать отдельно модуль мультимодульного приложения:
