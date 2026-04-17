@@ -175,8 +175,17 @@ services:
     build: ./analytics-service
     environment:
       SPRING_PROFILES_ACTIVE: docker
-#    ports:
-#      - "8084:8080"
+    depends_on:
+      - kafka-0
+      - kafka-1
+      - kafka-2
+
+  dlt-processor-service:
+    build: ./dlt-processor-service
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+    #    ports:
+    #      - "8084:8080"
     depends_on:
       - kafka-0
       - kafka-1

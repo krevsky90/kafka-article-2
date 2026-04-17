@@ -17,4 +17,15 @@ public class KafkaConfig {
             .config(TopicConfig.RETENTION_BYTES_CONFIG, "524288000")
             .build();
     }
+
+    //this topic contains messages from 'order-placed' topic that cannot be consumed by inventory-service
+    @Bean
+    public NewTopic orderPlacedDLTopic() {
+        return TopicBuilder.name("order-placed-dlt")
+                .partitions(3)
+                .replicas(3)
+                .config(TopicConfig.RETENTION_MS_CONFIG, "86400000")
+                .config(TopicConfig.RETENTION_BYTES_CONFIG, "524288000")
+                .build();
+    }
 }

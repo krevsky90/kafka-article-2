@@ -25,6 +25,7 @@
         <module>notification-service</module>
         <module>analytics-service</module>
         <module>krev-service</module>
+        <module>dlt-processor-service</module>
     </modules>
 
     <properties>
