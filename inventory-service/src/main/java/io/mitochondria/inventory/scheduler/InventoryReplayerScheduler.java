@@ -1,8 +1,8 @@
 package io.mitochondria.inventory.scheduler;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.mitochondria.inventory.event.InventoryRejectedEvent;
-import io.mitochondria.inventory.event.InventoryReservedEvent;
+import io.mitochondria.events.inventory.InventoryRejectedEvent;
+import io.mitochondria.events.inventory.InventoryReservedEvent;
 import io.mitochondria.inventory.model.OutboxEvent;
 import io.mitochondria.inventory.repository.OutboxEventRepository;
 import org.slf4j.Logger;

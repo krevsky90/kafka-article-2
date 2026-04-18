@@ -1,7 +1,7 @@
 package io.mitochondria.notification.service;
 
-import io.mitochondria.inventory.event.InventoryRejectedEvent;
-import io.mitochondria.inventory.event.InventoryReservedEvent;
+import io.mitochondria.events.inventory.InventoryRejectedEvent;
+import io.mitochondria.events.inventory.InventoryReservedEvent;
 import io.mitochondria.notification.model.ProcessedOrderId;
 import io.mitochondria.notification.repository.ProcessedOrderIdRepository;
 import org.slf4j.Logger;

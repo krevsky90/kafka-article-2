@@ -1,6 +1,6 @@
 package io.mitochondria.inventory.service;
 
-import io.mitochondria.order.event.OrderPlacedEvent;
+import io.mitochondria.events.order.OrderPlacedEvent;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.support.KafkaHeaders;
 import org.springframework.messaging.handler.annotation.Header;

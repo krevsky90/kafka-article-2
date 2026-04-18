@@ -1,8 +1,9 @@
 package io.mitochondria.inventory.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.mitochondria.inventory.event.InventoryRejectedEvent;
-import io.mitochondria.inventory.event.InventoryReservedEvent;
+import io.mitochondria.events.inventory.InventoryRejectedEvent;
+import io.mitochondria.events.inventory.InventoryReservedEvent;
+import io.mitochondria.events.order.OrderPlacedEvent;
 import io.mitochondria.inventory.exception.NonRetryableException;
 import io.mitochondria.inventory.exception.RetryableException;
 import io.mitochondria.inventory.model.OutboxEvent;
@@ -10,7 +11,6 @@ import io.mitochondria.inventory.model.ProcessedOrderId;
 import io.mitochondria.inventory.repository.InventoryRepository;
 import io.mitochondria.inventory.repository.OutboxEventRepository;
 import io.mitochondria.inventory.repository.ProcessedOrderIdRepository;
-import io.mitochondria.order.event.OrderPlacedEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;

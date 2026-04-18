@@ -1,7 +1,7 @@
 package io.mitochondria.krev.service;
 
-import io.mitochondria.inventory.event.InventoryRejectedEvent;
-import io.mitochondria.inventory.event.InventoryReservedEvent;
+import io.mitochondria.events.inventory.InventoryRejectedEvent;
+import io.mitochondria.events.inventory.InventoryReservedEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.kafka.annotation.KafkaListener;

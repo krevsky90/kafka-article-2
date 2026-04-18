@@ -1,7 +1,7 @@
 package io.mitochondria.order.service;
 
+import io.mitochondria.events.order.OrderPlacedEvent;
 import io.mitochondria.order.dto.OrderRequest;
-import io.mitochondria.order.event.OrderPlacedEvent;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 

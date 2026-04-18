@@ -3,6 +3,8 @@
   <component name="Encoding">
     <file url="file://$PROJECT_DIR$/analytics-service/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/dlt-processor-service/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/events/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/events/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/inventory-service/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/krev-service/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/notification-service/src/main/java" charset="UTF-8" />
