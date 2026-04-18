@@ -143,7 +143,26 @@ Avro:
 Header:
     пустой
 
+NOTE: если для kafka-ui настроено KAFKA_CLUSTERS_0_SCHEMAREGISTRY: http://schema-registry:8081,
+    то в kafka-ui сообщение показывается в виде JSON-а (для удобства), т.к.
+        Kafka UI делает:
+        читает сырые байты из Kafka
+        идёт в Schema Registry
+        получает схему
+        десериализует Avro
+        показывает тебе как JSON
+    на самом деле сообщение в авро-виде, в чем можно убедиться через консоль:
+        docker exec -it kafka-0 kafka-console-consumer --bootstrap-server kafka-0:9091 --topic order-placed --from-beginning
 
+NOTE: внимательно следить за тем, что именно отправляется в кафку! это д б Avro-формат, а не JSON-овые DTO!
+    иначе будут ошибки вида: org.apache.kafka.common.errors.SerializationException: Error registering Avro schema"bytes"
+    тогда внимательно проверяем в коде, что отправляем в kafkaTemplate.send
+
+NOTE: внимательно следить за тем, чтоб в БД сохранять именно Dto (на базе json-а), а не авро
+
+NOTE: т.к. Dead letter processor принимает данные от ErrorHandlingDeserializer, к-ый отправляет baase-64 строки,
+    то deserializer в Dead letter processor-е должен быть StringDeserializer, без всякого авро.
+    т.е. best practice: сервисы общаются авро-сообщениями, а в DL-processor обрабатывает строки
 ========================
 
 Мавен команды:

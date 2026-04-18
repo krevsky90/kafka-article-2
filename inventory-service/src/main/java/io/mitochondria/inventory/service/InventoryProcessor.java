@@ -1,9 +1,9 @@
 package io.mitochondria.inventory.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.mitochondria.events.inventory.InventoryRejectedEvent;
-import io.mitochondria.events.inventory.InventoryReservedEvent;
 import io.mitochondria.events.order.OrderPlacedEvent;
+import io.mitochondria.inventory.dto.InventoryRejectedDto;
+import io.mitochondria.inventory.dto.InventoryReservedDto;
 import io.mitochondria.inventory.exception.NonRetryableException;
 import io.mitochondria.inventory.exception.RetryableException;
 import io.mitochondria.inventory.model.OutboxEvent;
@@ -56,19 +56,20 @@ public class InventoryProcessor {
             throw new RetryableException("Database error", ex);
         }
         String topic = count > 0 ? "inventory-reserved" : "inventory-rejected";
-        Object event = count > 0 ?
-                new InventoryReservedEvent(
+        //this is json dto! not avro object!
+        Object dto = count > 0 ?
+                new InventoryReservedDto(
                         orderId,
                         email
                 ) :
-                new InventoryRejectedEvent(
+                new InventoryRejectedDto(
                         orderId,
                         email
                 );
 
         String eventAsString;
         try {
-            eventAsString = objectMapper.writeValueAsString(event);
+            eventAsString = objectMapper.writeValueAsString(dto);
         } catch (Exception e) {
             throw new NonRetryableException("Serialization failed for order: " + orderId, e);
         }

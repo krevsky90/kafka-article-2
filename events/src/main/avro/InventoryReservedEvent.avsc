@@ -1,0 +1,9 @@
+{
+  "type": "record",
+  "name": "InventoryReservedEvent",
+  "namespace": "io.mitochondria.events.inventory",
+  "fields": [
+    { "name": "orderId", "type": "string" },
+    { "name": "email", "type": "string" }
+  ]
+}

@@ -23,9 +23,9 @@ public class NotificationService {
     public void sendNotificationIfReserved(InventoryReservedEvent inventoryReservedEvent) {
         //deduplication check
         try {
-            processedOrderIdRepository.save(new ProcessedOrderId(inventoryReservedEvent.orderID()));
+            processedOrderIdRepository.save(new ProcessedOrderId(inventoryReservedEvent.getOrderId().toString()));
         } catch (DataIntegrityViolationException ex) {
-            logger.info("Order {} already processed", inventoryReservedEvent.orderID());
+            logger.info("Order {} already processed", inventoryReservedEvent.getOrderId().toString());
             return;
         }
 
@@ -36,9 +36,9 @@ public class NotificationService {
     public void sendNotificationIfRejected(InventoryRejectedEvent inventoryRejectedEvent) {
         //deduplication check
         try {
-            processedOrderIdRepository.save(new ProcessedOrderId(inventoryRejectedEvent.orderID()));
+            processedOrderIdRepository.save(new ProcessedOrderId(inventoryRejectedEvent.getOrderId().toString()));
         } catch (DataIntegrityViolationException ex) {
-            logger.info("Order {} already processed", inventoryRejectedEvent.orderID());
+            logger.info("Order {} already processed", inventoryRejectedEvent.getOrderId().toString());
             return;
         }
 

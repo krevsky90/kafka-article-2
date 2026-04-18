@@ -3,6 +3,8 @@ package io.mitochondria.inventory.scheduler;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.mitochondria.events.inventory.InventoryRejectedEvent;
 import io.mitochondria.events.inventory.InventoryReservedEvent;
+import io.mitochondria.inventory.dto.InventoryRejectedDto;
+import io.mitochondria.inventory.dto.InventoryReservedDto;
 import io.mitochondria.inventory.model.OutboxEvent;
 import io.mitochondria.inventory.repository.OutboxEventRepository;
 import org.slf4j.Logger;
@@ -36,10 +38,22 @@ public class InventoryReplayerScheduler {
             try {
                 String topic = event.getTopic();
                 String payloadJson = event.getPayload();
-                //todo: add flexibility
-                Object payload = "inventory-reserved".equals(topic)
-                        ? objectMapper.readValue(payloadJson, InventoryReservedEvent.class)
-                        : objectMapper.readValue(payloadJson, InventoryRejectedEvent.class);
+                Object payload = null;
+
+                switch (topic) {
+                    case "inventory-reserved" -> {
+                        //like JSON
+                        InventoryReservedDto dto = objectMapper.readValue(payloadJson, InventoryReservedDto.class);
+                        //convert to Avro format to send to Kafka
+                        payload = new InventoryReservedEvent(dto.orderId(), dto.email());
+                    }
+                    case "inventory-rejected" -> {
+                        //like JSON
+                        InventoryRejectedDto dto = objectMapper.readValue(payloadJson, InventoryRejectedDto.class);
+                        //convert to Avro format to send to Kafka
+                        payload = new InventoryRejectedEvent(dto.orderId(), dto.email());
+                    }
+                }
 
                 kafkaTemplate.send(topic, event.getKey(), payload).get();  //NOTE! sync mode to be 100% ensure that message is acked by kafka
 
