@@ -22,7 +22,7 @@ public class InventoryService {
         System.out.println(
                 "Instance: " + InetAddress.getLocalHost().getHostName() +
                         " | Partition: " + partition +
-                        " | Order: " + orderPlacedEvent.orderId()
+                        " | Order: " + orderPlacedEvent.getOrderId().toString()
         );
 
         inventoryProcessor.process(orderPlacedEvent);

@@ -72,6 +72,26 @@ services:
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
       KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
 
+  schema-registry:
+    image: confluentinc/cp-schema-registry:8.1.0
+    container_name: schema-registry
+    hostname: schema-registry
+    depends_on:
+      - kafka-0
+      - kafka-1
+      - kafka-2
+    ports:
+      - "8087:8081"
+    environment:
+      # Адреса нод кластера
+      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: kafka-0:9091,kafka-1:9091,kafka-2:9091
+      # Имя хоста. когда будет выбрана master-нода в кластере schema-registry,
+      # нода запишет в топик _schemas свой адрес http://schema-registry:8081
+      # А если запрос придет к slave-ноде, то она перенаправит его на мастер-ноду на указанный адрес
+      SCHEMA_REGISTRY_HOST_NAME: schema-registry
+      # Слушаем на 8081 порту на всех сетевых интерфейсах
+      SCHEMA_REGISTRY_LISTENERS: http://0.0.0.0:8081
+
   kafka-ui:
     image: provectuslabs/kafka-ui:v0.7.2
     container_name: kafka-ui
@@ -80,6 +100,7 @@ services:
       - kafka-0
       - kafka-1
       - kafka-2
+      - schema-registry
     ports:
       - "8086:8080"
     environment:
@@ -90,6 +111,10 @@ services:
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka-0:9091,kafka-1:9091,kafka-2:9091
       # Настройка для динамической конфигурации брокеров через UI
       DYNAMIC_CONFIG_ENABLED: true
+      # Указываем адрес реестра для того, чтобы Kafka-UI его подхватила
+      # Это нужно для красивого отображения сообщений, ведь для того, чтобы
+      # Получить схему, нам необходимо перейти в реестр
+      KAFKA_CLUSTERS_0_SCHEMAREGISTRY: http://schema-registry:8081
 
   inventory-postgres:
     image: postgres:15

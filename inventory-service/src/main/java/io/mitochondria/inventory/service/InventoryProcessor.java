@@ -36,40 +36,45 @@ public class InventoryProcessor {
     // that uses JPA that needs existing transaction!
     @Transactional
     public void process(OrderPlacedEvent orderPlacedEvent) {
+        String orderId = orderPlacedEvent.getOrderId().toString();
+        String productName = orderPlacedEvent.getProductName().toString();
+        String email = orderPlacedEvent.getEmail().toString();
+        int quantity = orderPlacedEvent.getQuantity();
+
         //deduplication check
         try {
-            processedOrderIdRepository.save(new ProcessedOrderId(orderPlacedEvent.orderId()));
+            processedOrderIdRepository.save(new ProcessedOrderId(orderId));
         } catch (DataIntegrityViolationException ex) {
-            logger.info("Order {} already processed", orderPlacedEvent.orderId());
+            logger.info("Order {} already processed", orderId);
             return;
         }
 
         int count;
         try {
-            count = inventoryRepository.deductStock(orderPlacedEvent.productName(), orderPlacedEvent.quantity());
+            count = inventoryRepository.deductStock(productName, quantity);
         } catch (Exception ex) {
             throw new RetryableException("Database error", ex);
         }
         String topic = count > 0 ? "inventory-reserved" : "inventory-rejected";
         Object event = count > 0 ?
                 new InventoryReservedEvent(
-                        orderPlacedEvent.orderId(),
-                        orderPlacedEvent.email()
+                        orderId,
+                        email
                 ) :
                 new InventoryRejectedEvent(
-                        orderPlacedEvent.orderId(),
-                        orderPlacedEvent.email()
+                        orderId,
+                        email
                 );
 
         String eventAsString;
         try {
             eventAsString = objectMapper.writeValueAsString(event);
         } catch (Exception e) {
-            throw new NonRetryableException("Serialization failed for order: " + orderPlacedEvent.orderId(), e);
+            throw new NonRetryableException("Serialization failed for order: " + orderId, e);
         }
 
         OutboxEvent outboxEvent = new OutboxEvent(
-                orderPlacedEvent.orderId(),
+                orderId,
                 topic,
                 eventAsString
         );
