@@ -80,8 +80,7 @@ best practice:
 	        port:
 	            interface UserInfoClient
 	        service:
-	            NotificationService (uses UserInfoClient's implementation -
-	todo:
+	            NotificationService (uses UserInfoClient's implementation)
 4) чтобы не консюмер не завис из-за недоступности grpc server, в клиенте вызываем удаленный метод через withDeadlineAfter, т.е.
 	UserResponse userResponse = stub
                 .withDeadlineAfter(Duration.ofSeconds(2))
