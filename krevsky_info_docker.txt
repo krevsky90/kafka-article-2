@@ -1,0 +1,15 @@
+Докер команды:
+1) Если изменил код сервиса inventory-service:
+    # 1. Собрал jar
+    mvn clean package -DskipTests
+    # 2. Пересобрал сервис
+    docker-compose build inventory-service
+    # 3. Перезапустил
+    docker-compose up -d --no-deps inventory-service
+    или (если несколько контейнеров надо)
+    docker-compose up -d --no-deps --scale inventory-service=2
+    иои (100% создание из новых имаджей)
+    docker-compose up -d --no-deps --build --force-recreate --scale inventory-service=2
+    где --no-deps значит, что не трогаются остальные сервисы нашего docker-compose
+2) Если запускаю несколько инстансов сервиса, то, например,
+    docker-compose up --scale inventory-service=2 --scale notification-service=2

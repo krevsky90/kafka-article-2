@@ -165,27 +165,6 @@ NOTE: т.к. Dead letter processor принимает данные от ErrorHan
     т.е. best practice: сервисы общаются авро-сообщениями, а в DL-processor обрабатывает строки
 ========================
 
-Мавен команды:
-1) чтобы собрать отдельно модуль мультимодульного приложения:
-    mvn clean package -pl inventory-service,someOtherModule (-am)
-        где -am (also make) — подтянет и соберёт зависимости этого модуля (если service1 зависит от других модулей внутри проекта)
-
-Докер команды:
-1) Если изменил код сервиса inventory-service:
-    # 1. Собрал jar
-    mvn clean package -DskipTests
-    # 2. Пересобрал сервис
-    docker-compose build inventory-service
-    # 3. Перезапустил
-    docker-compose up -d --no-deps inventory-service
-    или (если несколько контейнеров надо)
-    docker-compose up -d --no-deps --scale inventory-service=2
-    иои (100% создание из новых имаджей)
-    docker-compose up -d --no-deps --build --force-recreate --scale inventory-service=2
-    где --no-deps значит, что не трогаются остальные сервисы нашего docker-compose
-2) Если запускаю несколько инстансов сервиса, то, например,
-    docker-compose up --scale inventory-service=2 --scale notification-service=2
-
 Кафка:
 1) как посмотреть оффсеты для партиции и консюмер группы:
     зайти на кафку: docker exec -it kafka-0 bash

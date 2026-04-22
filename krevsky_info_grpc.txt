@@ -1,0 +1,88 @@
+info:
+https://chatgpt.com/g/g-p-69de2569c3f481918b01d49dddd12f4c-swe/c/69e73366-d62c-83eb-b508-7f37176f694e
+https://chatgpt.com/g/g-p-69de2569c3f481918b01d49dddd12f4c/c/69e7cb1c-e200-83eb-9158-99dde4e1b2d8
+https://chatgpt.com/c/69e7b5ed-37b8-83eb-a710-e12ee36da1ae
+good explanation of theory https://alexanderobregon.substack.com/p/grpc-services-with-spring-boot-and
+
+<goal>compile-custom</goal> - для генерации gRPC кода (сервисов)
+<goal>compile</goal> - для генерации протобаф (сущностей/моделей)
+
+зависимости:
+<artifactId>grpc-netty-shaded</artifactId> - отвечает за сетевой взаимодействие. т.е. это транспорт поверх HTTP/2
+	поднимает сервер (ServerBuilder)
+	устанавливает соединения
+	обрабатывает HTTP/2
+	управляет потоками (event loop)
+	поддерживает TLS
+<artifactId>grpc-protobuf</artifactId> - Связка между gRPC и Protocol Buffers:
+	сериализует запросы в бинарный формат
+	десериализует ответы
+	связывает .proto с runtime
+<artifactId>grpc-stub</artifactId> - API для работы с gRPC на уровне Java-кода. т.е. интерфейс между кодом приложения и gRPC
+	создает клиентские stubs (BlockingStub, FutureStub)
+	создает базовые классы для сервера (ImplBase)
+	создает StreamObserver
+<artifactId>protobuf-java</artifactId> - Runtime библиотека для Protocol Buffers.
+	содержит базовые классы (Message, Builder)
+	используется сгенерированными классами
+	реализует сериализацию/десериализацию
+<artifactId>javax.annotation-api</artifactId> - для grpc 1.58
+    ИЛИ
+<artifactId>jakarta.annotation-api</artifactId> - для spring 4.0 + новые генераторы
+
+NOTE:
+Protobuf compiler (protoc) → генерирует код
+Protobuf runtime (protobuf-java) → выполняет этот код во время работы программы
+
+Как они работают вместе (жизненный цикл запроса)
+1. Клиент вызывает stub (grpc-stub)
+2. Объект сериализуется (grpc-protobuf + protobuf-java)
+3. Отправляется по сети (grpc-netty-shaded)
+4. Сервер принимает
+5. Десериализация
+6. Вызов метода
+7. Ответ обратно тем же путём
+
+ЕСЛИ юзать офиц Spring Boot GRPC, то
+Spring gRPC 1.0.x requires Spring Boot 4.0.x.
+(см https://github.com/spring-projects/spring-grpc/issues/355)
+
+Поэтому если спринг бут 3.х, то для grpc юзаем стартеры из net.devh:
+	<dependency>
+        <groupId>net.devh</groupId>
+        <artifactId>grpc-server-spring-boot-starter</artifactId>
+        <version>2.15.0.RELEASE</version>
+    </dependency>
+
+	<dependency>
+        <groupId>net.devh</groupId>
+        <artifactId>grpc-client-spring-boot-starter</artifactId>
+        <version>2.15.0.RELEASE</version>
+    </dependency>
+поскольку 2.15 тянет grpc-core 1.58, то ЭТА ЖЕ версия должна юзаться для
+<artifactId>grpc-protobuf</artifactId>
+и <artifactId>grpc-stub</artifactId>
+в модуле proto-common. Поэтому можно саму версию вынести в главный пом в виде <artifactId>grpc-bom</artifactId>
+А еще в модуле proto-common указать 1.58 явно в плагине, чтобы сгенеренные grpc-классы были из той же версии grpc, что и клиент/сервер, их использующие.
+
+best practice:
+1) разделяем сервис с бизнес-логикой (UserInfoService класс) и транспорт (UserInfoGrpcService), т.к. потом можно будет grpc заменить на, например, REST, не меняя бизнес-логику
+2) Service кидает domain exceptions (UserNotFoundException), а не просто RuntimeException
+	а gRPC слой мапит их в Status, т.е. observer.onError(Status.NOT_FOUND.withDescription("User not found: " + email).asRuntimeException())
+3) на стороне grpc клиента - grpc клиент - это слой инфраструктуры. он должен возвращать некий "обычный" DTO UserInfo, а не свой grpc-шный UserResponse
+	поэтому структура пакетов должна быть, как в DDD:
+	    notification:
+	        adapter.grpc:
+	            GrpcUserInfoClient implements UserInfoClient
+	            Usermapper
+	        domain:
+	            UserInfo
+	        port:
+	            interface UserInfoClient
+	        service:
+	            NotificationService (uses UserInfoClient's implementation -
+	todo:
+4) чтобы не консюмер не завис из-за недоступности grpc server, в клиенте вызываем удаленный метод через withDeadlineAfter, т.е.
+	UserResponse userResponse = stub
+                .withDeadlineAfter(Duration.ofSeconds(2))
+                .getUserInfo(userRequest);
