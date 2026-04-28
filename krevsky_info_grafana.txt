@@ -1,0 +1,88 @@
+info:
+https://chatgpt.com/g/g-p-69de2569c3f481918b01d49dddd12f4c/c/69ed2010-6148-83eb-ac62-6a4cf4681d7e
+https://chatgpt.com/g/g-p-69de2569c3f481918b01d49dddd12f4c/c/69f092ce-c6ec-83eb-96b1-d57e05c7c18c
+
+Как подключить спрингбут приложение к прометеусу:
+1) в application.properties
+    # endpoints
+    management.endpoints.web.exposure.include=health,info,prometheus,metrics
+    # label to filter in Prometheus
+    management.metrics.tags.application=${spring.application.name}
+NOTE:
+    health - up or down
+    info - можно указать (где??) в метаданных приложения его версию, описание и пр техническую инфу
+    prometheus - именно через этот эндпоинт prometheus периодически читает метрики приложения
+
+    также есть НЕпродовые эндпоинты:
+    metrics - raw доступ к метрикам. например, /actuator/metrics/http.server.requests
+      	полезен, когда дебаг или посмотреть labels
+    /beans и /env у Spring Actuator-a
+
+2) добавить в pom:
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+            <!-- NOTE: also contains micrometer-core -->
+        </dependency>
+        <!-- адаптер для формата метрик для Prometheus -->
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-registry-prometheus</artifactId>
+        </dependency>
+
+3) УБЕДИТЬСЯ (или добавить) в pom:
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+		<artifactId>spring-boot-starter-web</artifactId>
+    </dependency>
+    без этой зависимости приложение не является Web-application => НЕ будет поднят Web сервер (netty / Tomcat)
+    => не будут работать никакие endpoint-ы, в том числе и actuator
+    NOTE: именно поэтому мы НЕ присоединяем krev-service и dlq-processor-service к Prometheus, а в user-service добавили spring-boot-starter-web
+
+В docker-compose.yaml создать контейнеры прометеуса и графаны.
+NOTE: для графаны запись
+    volumes:
+      - "./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro"
+      - "./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro"
+    значит, что локальный файл ./prometheus/prometheus.yml мапится на файл внутри контейнера
+    ro - Prometheus не сможет случайно перезаписать конфиг, к-ый скопирован из локального проекта в момент старта прометеуса
+
+Как настроить Prometheus:
+    В файле monitoring/prometheus/prometheus.yml
+    указать job-ы для всех приложений, за к-ыми нужно следить. Пример:
+        scrape_configs:
+          - job_name: 'order-service'
+            metrics_path: '/actuator/prometheus'  # endpoint of microservice
+            static_configs:
+              - targets: ['order-service:8080'] # DNS-name of the service in docker-compose, internal container port from server.port of application-docker.properties
+
+Как настроить Grafana:
+1) хранить все дашборды в папке monitoring/grafana/dashboards
+2) создать конфиг monitoring/grafana/provisioning/dashboards/dashboards.yml
+    он используется для Dashboard Provisioning в Grafana.
+    Заставляет Grafana «подхватывать» все JSON-дашборды из папки /var/lib/grafana/dashboards и следить за их обновлениями.
+3) (опционально) создать monitoring/grafana/provisioning/datasources/datasources.yml
+
+- - - - - - - - - - - - - - - - - - - - - - - -
+Как открыть UI:
+    prometheus: http://localhost:9090/
+    grafana: http://localhost:3000 admin/admin
+
+Как посмотреть, за какими сервисами следит Prometheus:
+    http://localhost:9090/targets
+
+Как проверить, что prometheus достукивается до приложения notification-service:
+1) зайти в контейнер прометеуса:
+    docker exec -it prometheus sh
+2) выполнить wget -qO- http://notification-service:8080/actuator/prometheus
+
+ИЛИ ЕСЛИ контейнер имеет внешний порт, то прямо через локал хост (внимание! юзаем внешний порт):
+    http://localhost:8081/actuator/prometheus
+
+Как скачать дашборд из графана лабс:
+1) через UI
+2) командой в файл:
+    curl -o monitoring/grafana/dashboards/jvm-micrometer.json https://grafana.com/api/dashboards/4701/revisions/latest/download
+
+ЕСЛИ поменяли json-файл дашборда в проекте, то для его подтягивания в графану достаточно рестартануть его:
+    docker compose restart grafana

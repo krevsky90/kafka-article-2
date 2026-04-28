@@ -1,0 +1,45 @@
+global:
+  scrape_interval: 15s  # Как часто опрашивать таргеты
+  evaluation_interval: 15s  # Как часто вычислять правила алертов
+
+scrape_configs:
+  - job_name: 'order-service'
+    metrics_path: '/actuator/prometheus'  # endpoint of microservice
+    static_configs:
+      - targets: ['order-service:8080'] # DNS-name of the service in docker-compose, port from server.port of application-docker.properties
+
+  - job_name: 'inventory-service'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['inventory-service:8080']
+
+  - job_name: 'notification-service'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['notification-service:8080']
+
+  - job_name: 'analytics-service'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['analytics-service:8080']
+
+  - job_name: 'user-service'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['user-service:8080']
+
+  - job_name: 'kafka-exporter'
+    static_configs:
+      - targets: ['kafka-exporter:9308']
+
+  - job_name: 'inventory-postgres-exporter'
+    static_configs:
+      - targets: ['inventory-postgres-exporter:9187']
+
+  - job_name: 'notification-postgres-exporter'
+    static_configs:
+      - targets: ['notification-postgres-exporter:9187']
+
+  - job_name: 'users-postgres-exporter'
+    static_configs:
+      - targets: ['users-postgres-exporter:9187']

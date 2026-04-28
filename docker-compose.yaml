@@ -116,6 +116,17 @@ services:
       # Получить схему, нам необходимо перейти в реестр
       KAFKA_CLUSTERS_0_SCHEMAREGISTRY: http://schema-registry:8081
 
+  kafka-exporter:
+    image: danielqsj/kafka-exporter:v1.9.0
+    command:
+      - "--kafka.server=kafka-0:9091"   # connect to broker
+    ports:
+      - "9308:9308"
+    depends_on:
+      - kafka-0
+      - kafka-1
+      - kafka-2
+
   inventory-postgres:
     image: postgres:15
     container_name: inventory-postgres
@@ -133,6 +144,15 @@ services:
       timeout: 5s
       retries: 5
       start_period: 10s
+
+  inventory-postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:v0.19.1
+    environment:
+      DATA_SOURCE_NAME: "postgresql://:postgres@postgres:5432/inventory_db?sslmode=disable"
+    ports:
+      - "9187:9187"
+    depends_on:
+      - inventory-postgres
 
   notification-postgres:
     image: postgres:15
@@ -152,6 +172,15 @@ services:
       retries: 5
       start_period: 10s
 
+  notification-postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:v0.19.1
+    environment:
+      DATA_SOURCE_NAME: "postgresql://:postgres@postgres:5432/notification_db?sslmode=disable"
+    ports:
+      - "9188:9187"
+    depends_on:
+      - notification-postgres
+
   users-postgres:
     image: postgres:15
     container_name: users-postgres
@@ -170,6 +199,15 @@ services:
       retries: 5
       start_period: 10s
 
+  users-postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:v0.19.1
+    environment:
+      DATA_SOURCE_NAME: "postgresql://:postgres@postgres:5432/users_db?sslmode=disable"
+    ports:
+      - "9189:9187"
+    depends_on:
+      - users-postgres
+
   order-service:
     build: ./order-service
     environment:
@@ -185,8 +223,6 @@ services:
     build: ./inventory-service
     environment:
       SPRING_PROFILES_ACTIVE: docker
-    #    ports:
-#      - "8082:8080"
     depends_on:
       - inventory-postgres
       - kafka-0
@@ -197,8 +233,6 @@ services:
     build: ./notification-service
     environment:
       SPRING_PROFILES_ACTIVE: docker
-#    ports:
-#      - "8083:8080"
     depends_on:
       - notification-postgres
       - kafka-0
@@ -227,8 +261,6 @@ services:
     build: ./dlt-processor-service
     environment:
       SPRING_PROFILES_ACTIVE: docker
-    #    ports:
-    #      - "8084:8080"
     depends_on:
       - kafka-0
       - kafka-1
@@ -238,10 +270,33 @@ services:
     build: ./user-service
     environment:
       SPRING_PROFILES_ACTIVE: docker
-    #    ports:
-    #      - "8085:8080"
     depends_on:
       - users-postgres
+
+  prometheus:
+    image: prom/prometheus:v3.8.0
+    volumes:
+      - "./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro"
+    ports:
+      - "9090:9090"
+    depends_on:
+      - order-service
+      - kafka-exporter
+      - inventory-postgres-exporter
+      - notification-postgres-exporter
+      - users-postgres-exporter
+
+  grafana:
+    image: grafana/grafana:13.0.1
+    volumes:
+      - "./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro"
+      - "./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro"
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: admin #default password
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
 
 volumes:
   pgdata:  # Определение именованного тома

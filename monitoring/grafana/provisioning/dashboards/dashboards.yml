@@ -1,0 +1,13 @@
+apiVersion: 1
+
+providers:
+  - name: 'Spring Krev Microservices'
+    orgId: 1
+    folder: ''
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 10
+    options:
+      # folder that contains JSON-files of dashboards
+      # (the same as set in docker-compose for 'grafana' service)
+      path: /var/lib/grafana/dashboards
