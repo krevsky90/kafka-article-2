@@ -1,0 +1,71 @@
+info: https://chat.qwen.ai/c/f14de623-ecc3-42da-8f50-b3307ecbacbe
+
+Эмпирически установил (подгоняя параметры по одному) ограничения для контейнера (order-service):
+deploy:
+  resources:
+    limits:
+      memory: 512m
+      cpus: "0.5"
+
+Также ограничил само приложение:
+JAVA_TOOL_OPTIONS: >
+        -Xms256m
+        -Xmx256m
+        -XX:MaxMetaspaceSize=96m
+        -XX:+UseG1GC
+        -XX:+UseContainerSupport
+
+Мысль:
+1) В стартере spring-boot-starter-web под капотом используется сервер Tomcat.
+2) Tomcat по умолчанию запускает 200 потоков.
+	и разрешает максимум подключений (maxConnections): 10 000 (для NIO).
+3) Один поток требует: 1 Мб для стека (из RAM) + процессор
+4) 1 cpu может обрабатывать
+* 1-2 потока при оч высокой загруженности потоков
+* 10-50 - при средней
+* до 100, если потоки в основном спят в ожидании I/o (например, БД)
+
+GPT chat советует:
+CPU	max threads
+0.25	16
+0.5	32
+1.0	50-100
+
+max число потоков томката в спрингбуте можно настроить, как и другие параметры, в application.properties:
+server.tomcat.threads.max=32	# max amount of worker-threads
+server.tomcat.threads.min-spare=8 # min amount of worker-threads (always ready => При burst traffic Tomcat не будет так активно создавать треды)
+server.tomcat.max-connections=128 # TCP connections
+
+потому что 32 threads хватает для:
+125 rps - такая нагрузка идет из k6/constant_load_test.js
+Kafka producer
+0.5 CPU
+
+Что происходит при запросе
+client request
+→ TCP connection
+→ Tomcat connection pool
+→ worker thread
+→ controller
+→ Kafka send
+→ response
+
+КАК понять, что все ок с приложением:
+1) Duration (время отклика) - д б миллисекунды
+2) Стабильный ровынй RPS (Rate график) - д б 125, если в k6 скрипте настроено пулять 125
+3) Threads под контролем:
+    Live threads: ~42 (=32 из конфига + ок 10 daemon, GC threads и т.д)
+    Runnable: пик ~40, потом стабилизация на ~8, например
+    Blocked: почти нет
+4) Load (нагрузка на CPU) - количество запросов в очереди в сервису
+5) CPU Usage:
+    например, спайк до 1.0 в начале (разогрев, JIT компиляция), потом стабильно 0.2-0.4 (20-40% от 0.5 CPU)
+6) GC Pressure:
+    например, пики до 0.0025 (0.25% CPU на GC)
+7) Heap Usage:
+    Классическая "пила" - GC работает штатно
+    После теста память стабилизировалась на ~X MiB
+
+
+
+

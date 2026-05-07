@@ -118,6 +118,7 @@ services:
 
   kafka-exporter:
     image: danielqsj/kafka-exporter:v1.9.0
+    container_name: kafka-exporter
     command:
       - "--kafka.server=kafka-0:9091"   # connect to broker
     ports:
@@ -147,6 +148,7 @@ services:
 
   inventory-postgres-exporter:
     image: prometheuscommunity/postgres-exporter:v0.19.1
+    container_name: inventory-postgres-exporter
     environment:
       DATA_SOURCE_NAME: "postgresql://:postgres@postgres:5432/inventory_db?sslmode=disable"
     ports:
@@ -174,6 +176,7 @@ services:
 
   notification-postgres-exporter:
     image: prometheuscommunity/postgres-exporter:v0.19.1
+    container_name: notification-postgres-exporter
     environment:
       DATA_SOURCE_NAME: "postgresql://:postgres@postgres:5432/notification_db?sslmode=disable"
     ports:
@@ -201,6 +204,7 @@ services:
 
   users-postgres-exporter:
     image: prometheuscommunity/postgres-exporter:v0.19.1
+    container_name: users-postgres-exporter
     environment:
       DATA_SOURCE_NAME: "postgresql://:postgres@postgres:5432/users_db?sslmode=disable"
     ports:
@@ -210,10 +214,22 @@ services:
 
   order-service:
     build: ./order-service
+    container_name: order-service
     environment:
       SPRING_PROFILES_ACTIVE: docker
+      JAVA_TOOL_OPTIONS: >
+        -Xms256m
+        -Xmx256m
+        -XX:MaxMetaspaceSize=96m
+        -XX:+UseG1GC
+        -XX:+UseContainerSupport
     ports:
       - "8081:8080"
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+          cpus: "0.5"
     depends_on:
       - kafka-0
       - kafka-1
@@ -221,6 +237,7 @@ services:
 
   inventory-service:
     build: ./inventory-service
+    container_name: inventory-service
     environment:
       SPRING_PROFILES_ACTIVE: docker
     depends_on:
@@ -231,6 +248,7 @@ services:
 
   notification-service:
     build: ./notification-service
+    container_name: notification-service
     environment:
       SPRING_PROFILES_ACTIVE: docker
     depends_on:
@@ -241,6 +259,7 @@ services:
 
   krev-service:
     build: ./krev-service
+    container_name: krev-service
     environment:
       SPRING_PROFILES_ACTIVE: docker
     depends_on:
@@ -250,6 +269,7 @@ services:
 
   analytics-service:
     build: ./analytics-service
+    container_name: analytics-service
     environment:
       SPRING_PROFILES_ACTIVE: docker
     depends_on:
@@ -259,6 +279,7 @@ services:
 
   dlt-processor-service:
     build: ./dlt-processor-service
+    container_name: dlt-processor-service
     environment:
       SPRING_PROFILES_ACTIVE: docker
     depends_on:
@@ -268,6 +289,7 @@ services:
 
   user-service:
     build: ./user-service
+    container_name: user-service
     environment:
       SPRING_PROFILES_ACTIVE: docker
     depends_on:
@@ -275,6 +297,7 @@ services:
 
   prometheus:
     image: prom/prometheus:v3.8.0
+    container_name: prometheus
     volumes:
       - "./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro"
     ports:
@@ -288,6 +311,7 @@ services:
 
   grafana:
     image: grafana/grafana:13.0.1
+    container_name: grafana
     volumes:
       - "./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro"
       - "./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro"
