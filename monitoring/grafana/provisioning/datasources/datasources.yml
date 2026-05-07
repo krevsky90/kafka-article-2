@@ -1,6 +1,7 @@
 apiVersion: 1
 datasources:
   - name: Prometheus
+    uid: Prometheus
     type: prometheus
     access: proxy # requests go through Grafana-server (no CORS-problems)
     url: http://prometheus:9090 # internal container address

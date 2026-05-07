@@ -13,6 +13,10 @@ import java.util.UUID;
 public class OrderService {
     private final KafkaTemplate<String, OrderPlacedEvent> kafkaTemplate;
     //custom metric (for grafana)
+    // will be shown in prometheus like:
+    // # HELP orderService_messages_sent_total Total messages sent to kafka
+    // # TYPE orderService_messages_sent_total counter
+    // orderService_messages_sent_total{application="order-service"} 1.0
     private final Counter sentMessagesCounter;
 
     public OrderService(KafkaTemplate<String, OrderPlacedEvent> kafkaTemplate, MeterRegistry registry) {
