@@ -66,6 +66,42 @@ client request
     Классическая "пила" - GC работает штатно
     После теста память стабилизировалась на ~X MiB
 
+КАК выглядит проблема из-за нехватки ресурсов:
+info: https://chatgpt.com/c/69fc9147-2d2c-83eb-a668-508deea39b46
+1) мало RAM (например, для созданных потоков Tomcat)
+2) часто срабатывает GC, чтобы очистить RAM
+3) т.к. GC требует CPU (GC threads конкурируют с Tomcat threads), то CPU сильно загружен, и приложение не справляется с обработкой запросов
+4) вырастает:
+4.1) Duration
+4.2) p95 и пр p
+4.3) растет очередь (Load) не обработанных запросов (особенно во время GC pause) => растет число неубитых
+    NOTE: Где может быть queue
+        Несколько уровней:
+        уровень	              - что копится
+        OS socket backlog	  - TCP connections
+        Tomcat accept queue	  - accepted sockets
+        Tomcat executor queue - requests
+        Client-side queue	  - k6 waiting
+5) из-за 4.3:
+5.1) создается еще больше тредов (up to max)
+5.2) дольше живут объекты: headers, buffers, objects, DTOs => попадают в old generation => сложнее GC
+6) из-за п.5.1:
+6.1) чаще context switching
+6.2) требуется больше RAM, что чаще запускает GC, паузы удлиняются
+NOTE: приложение даже может не отсылать метрики, и на графиках будут разрывы, хотя приложение не рестартовало
+7) из-за 6.1 CPU pressure increases
+8) GC becomes even slower
+9) timeout storm, т.к. latency начинает расти нелинейно.
+    пример:
+        в норме request = 20ms
+        потом GC pause = 2s
+        очередь 100 requests waiting
+        Даже после GC каждый request ждёт: thread, CPU, Kafka send
+        Latency становится 2s + queue wait + processing
+    это называется: queue collapse или cascading failure
+
+
+
 
 
 
