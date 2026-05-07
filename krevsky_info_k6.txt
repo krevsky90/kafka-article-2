@@ -1,0 +1,7 @@
+Нагрузочное тестирование с помощью k6:
+1) скачать k6
+NOTE: из-за ограничений РФ нужно включить VPN и скачать https://github.com/grafana/k6/releases/download/v2.0.0-rc1/k6-v2.0.0-rc1-windows-amd64.msi через браузер
+1.2) установить k6
+и проверить командой k6 version
+2) создать скрипт k6/constant_load_test.js
+3) выполнить скрипт k6 run k6/constant_load_test.js
