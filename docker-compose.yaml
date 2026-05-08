@@ -218,8 +218,8 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: docker
       JAVA_TOOL_OPTIONS: >
-        -Xms256m
-        -Xmx256m
+        -Xms512m
+        -Xmx512m
         -XX:MaxMetaspaceSize=96m
         -XX:+UseG1GC
         -XX:+UseContainerSupport
@@ -228,8 +228,8 @@ services:
     deploy:
       resources:
         limits:
-          memory: 512m
-          cpus: "0.5"
+          memory: 768m
+          cpus: "2"
     depends_on:
       - kafka-0
       - kafka-1

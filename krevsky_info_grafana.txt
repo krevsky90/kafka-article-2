@@ -4,8 +4,13 @@ https://chatgpt.com/g/g-p-69de2569c3f481918b01d49dddd12f4c/c/69f092ce-c6ec-83eb-
 
 Как подключить спрингбут приложение к прометеусу:
 1) в application.properties
-    # endpoints
+    # metrics (publish endpoint)
     management.endpoints.web.exposure.include=health,info,prometheus,metrics
+    # provide access to published endpoint
+    management.endpoint.prometheus.access=read-only
+    # for Utilization metrics (tomcat_threads_busy_threads, tomcat_threads_current_threads, tomcat_threads_config_max_threads)
+management.metrics.enable.tomcat=true
+server.tomcat.mbeanregistry.enabled=true
     # label to filter in Prometheus
     management.metrics.tags.application=${spring.application.name}
 NOTE:
@@ -98,6 +103,8 @@ info: https://chatgpt.com/g/g-p-69de2569c3f481918b01d49dddd12f4c/c/69fb104c-fa24
 
 Как посмотреть, за какими сервисами следит Prometheus:
     http://localhost:9090/targets
+Как посмотреть, какие метрики отдает сервис:
+    http://localhost:8081/actuator/metrics
 
 Как проверить, что prometheus достукивается до приложения notification-service:
 1) зайти в контейнер прометеуса:

@@ -13,3 +13,6 @@
     где --no-deps значит, что не трогаются остальные сервисы нашего docker-compose
 2) Если запускаю несколько инстансов сервиса, то, например,
     docker-compose up --scale inventory-service=2 --scale notification-service=2
+
+3) как скопировать файл из контейнера на хост:
+    docker cp order-service:/app/app.jar .
