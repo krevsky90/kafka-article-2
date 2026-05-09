@@ -53,13 +53,17 @@ NOTE: для графаны запись
     ro - Prometheus не сможет случайно перезаписать конфиг, к-ый скопирован из локального проекта в момент старта прометеуса
 
 Как настроить Prometheus:
+    best practice:
+        для передачи метрик юзать ОТДЕЛЬНЫЙ порт (а не server.port):
+            добавим в application(-docker).properties
+             management.server.port=9001
     В файле monitoring/prometheus/prometheus.yml
     указать job-ы для всех приложений, за к-ыми нужно следить. Пример:
         scrape_configs:
           - job_name: 'order-service'
             metrics_path: '/actuator/prometheus'  # endpoint of microservice
             static_configs:
-              - targets: ['order-service:8080'] # DNS-name of the service in docker-compose, internal container port from server.port of application-docker.properties
+              - targets: ['order-service:9001'] # DNS-name of the service in docker-compose, port from management.server.port or (if it is empty) server.port of application(-docker).properties
 
 Как настроить Grafana:
 1) хранить все дашборды в папке monitoring/grafana/dashboards
@@ -104,7 +108,7 @@ info: https://chatgpt.com/g/g-p-69de2569c3f481918b01d49dddd12f4c/c/69fb104c-fa24
 Как посмотреть, за какими сервисами следит Prometheus:
     http://localhost:9090/targets
 Как посмотреть, какие метрики отдает сервис:
-    http://localhost:8081/actuator/metrics
+    http://localhost:9001/actuator/metrics
 
 Как проверить, что prometheus достукивается до приложения notification-service:
 1) зайти в контейнер прометеуса:
@@ -112,7 +116,7 @@ info: https://chatgpt.com/g/g-p-69de2569c3f481918b01d49dddd12f4c/c/69fb104c-fa24
 2) выполнить wget -qO- http://notification-service:8080/actuator/prometheus
 
 ИЛИ ЕСЛИ контейнер имеет внешний порт, то прямо через локал хост (внимание! юзаем внешний порт):
-    http://localhost:8081/actuator/prometheus
+    http://localhost:9001/actuator/prometheus
 
 Как скачать дашборд из графана лабс:
 1) через UI

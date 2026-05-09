@@ -6,27 +6,27 @@ scrape_configs:
   - job_name: 'order-service'
     metrics_path: '/actuator/prometheus'  # endpoint of microservice
     static_configs:
-      - targets: ['order-service:8080'] # DNS-name of the service in docker-compose, port from server.port of application-docker.properties
+      - targets: ['order-service:9001'] # DNS-name of the service in docker-compose, port from management.server.port or (if it is empty) server.port of application(-docker).properties
 
   - job_name: 'inventory-service'
     metrics_path: '/actuator/prometheus'
     static_configs:
-      - targets: ['inventory-service:8080']
+      - targets: ['inventory-service:9001'] # DNS-name of the service in docker-compose, port from management.server.port or (if it is empty) server.port of application(-docker).properties
 
   - job_name: 'notification-service'
     metrics_path: '/actuator/prometheus'
     static_configs:
-      - targets: ['notification-service:8080']
+      - targets: ['notification-service:9001'] # DNS-name of the service in docker-compose, port from management.server.port or (if it is empty) server.port of application(-docker).properties
 
   - job_name: 'analytics-service'
     metrics_path: '/actuator/prometheus'
     static_configs:
-      - targets: ['analytics-service:8080']
+      - targets: ['analytics-service:9001'] # DNS-name of the service in docker-compose, port from management.server.port or (if it is empty) server.port of application(-docker).properties
 
   - job_name: 'user-service'
     metrics_path: '/actuator/prometheus'
     static_configs:
-      - targets: ['user-service:8080']
+      - targets: ['user-service:9001'] # DNS-name of the service in docker-compose, port from management.server.port or (if it is empty) server.port of application(-docker).properties
 
   - job_name: 'kafka-exporter'
     static_configs:
