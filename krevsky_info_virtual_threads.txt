@@ -8,6 +8,8 @@
 Есть небольшой overhead на переключение - т.к. метаданные вирт потока надо сохранять в heap перед переключением на другой вирт поток.
 Поэтому можно прибавить RAM
 
+NOTE: в графане Utilization будет показывать -1
+
 info: https://chat.qwen.ai/c/f14de623-ecc3-42da-8f50-b3307ecbacbe
 см spring.threads.virtual.enabled=true
 
