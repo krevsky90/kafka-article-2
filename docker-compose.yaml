@@ -116,18 +116,6 @@ services:
       # Получить схему, нам необходимо перейти в реестр
       KAFKA_CLUSTERS_0_SCHEMAREGISTRY: http://schema-registry:8081
 
-  kafka-exporter:
-    image: danielqsj/kafka-exporter:v1.9.0
-    container_name: kafka-exporter
-    command:
-      - "--kafka.server=kafka-0:9091"   # connect to broker
-    ports:
-      - "9308:9308"
-    depends_on:
-      - kafka-0
-      - kafka-1
-      - kafka-2
-
   inventory-postgres:
     image: postgres:15
     container_name: inventory-postgres
@@ -145,16 +133,6 @@ services:
       timeout: 5s
       retries: 5
       start_period: 10s
-
-  inventory-postgres-exporter:
-    image: prometheuscommunity/postgres-exporter:v0.19.1
-    container_name: inventory-postgres-exporter
-    environment:
-      DATA_SOURCE_NAME: "postgresql://:postgres@inventory-postgres:5432/inventory_db?sslmode=disable"
-    ports:
-      - "9187:9187"
-    depends_on:
-      - inventory-postgres
 
   notification-postgres:
     image: postgres:15
@@ -174,16 +152,6 @@ services:
       retries: 5
       start_period: 10s
 
-  notification-postgres-exporter:
-    image: prometheuscommunity/postgres-exporter:v0.19.1
-    container_name: notification-postgres-exporter
-    environment:
-      DATA_SOURCE_NAME: "postgresql://:postgres@notification-postgres:5432/notification_db?sslmode=disable"
-    ports:
-      - "9188:9187"
-    depends_on:
-      - notification-postgres
-
   users-postgres:
     image: postgres:15
     container_name: users-postgres
@@ -202,19 +170,11 @@ services:
       retries: 5
       start_period: 10s
 
-  users-postgres-exporter:
-    image: prometheuscommunity/postgres-exporter:v0.19.1
-    container_name: users-postgres-exporter
-    environment:
-      DATA_SOURCE_NAME: "postgresql://:postgres@users-postgres:5432/users_db?sslmode=disable"
-    ports:
-      - "9189:9187"
-    depends_on:
-      - users-postgres
-
   order-service:
     build: ./order-service
     container_name: order-service
+    volumes:
+      - ./monitoring/opentelemetry-javaagent.jar:/otel/opentelemetry-javaagent.jar
     environment:
       SPRING_PROFILES_ACTIVE: docker
       JAVA_TOOL_OPTIONS: >
@@ -225,9 +185,13 @@ services:
         -XX:MaxDirectMemorySize=32m
         -XX:NativeMemoryTracking=summary
         -XX:+UseG1GC
+        -javaagent:/otel/opentelemetry-javaagent.jar
+        -Dotel.service.name=order-service
+        -Dotel.exporter.otlp.endpoint=http://otel-collector:4318
+        -Dotel.exporter.otlp.protocol=http/protobuf
+    # only for http://localhost:9001/actuator/prometheus
     ports:
       - "8081:8080"
-      # only for http://localhost:9001/actuator/prometheus
       - "9001:9001"
     deploy:
       resources:
@@ -238,10 +202,13 @@ services:
       - kafka-0
       - kafka-1
       - kafka-2
+      - otel-collector
 
   inventory-service:
     build: ./inventory-service
     container_name: inventory-service
+    volumes:
+      - ./monitoring/opentelemetry-javaagent.jar:/otel/opentelemetry-javaagent.jar
     environment:
       SPRING_PROFILES_ACTIVE: docker
       JAVA_TOOL_OPTIONS: >
@@ -252,6 +219,10 @@ services:
         -XX:MaxDirectMemorySize=32m
         -XX:NativeMemoryTracking=summary
         -XX:+UseG1GC
+        -javaagent:/otel/opentelemetry-javaagent.jar
+        -Dotel.service.name=inventory-service
+        -Dotel.exporter.otlp.endpoint=http://otel-collector:4318
+        -Dotel.exporter.otlp.protocol=http/protobuf
     deploy:
       resources:
         limits:
@@ -262,10 +233,13 @@ services:
       - kafka-0
       - kafka-1
       - kafka-2
+      - otel-collector
 
   notification-service:
     build: ./notification-service
     container_name: notification-service
+    volumes:
+      - ./monitoring/opentelemetry-javaagent.jar:/otel/opentelemetry-javaagent.jar
     environment:
       SPRING_PROFILES_ACTIVE: docker
       # Xss - Thread Stack Size. By default, it is 1 Mb for Tomcat's thread. but for usual CRUD app or Kafka consumer/producer it is ok to be 256k
@@ -277,8 +251,11 @@ services:
         -XX:CompressedClassSpaceSize=64m
         -XX:MaxDirectMemorySize=32m
         -XX:NativeMemoryTracking=summary
-        -XX:+UseG1GC
-      #  -XX:+UseContainerSupport
+        -XX:+UseG1GC      
+        -javaagent:/otel/opentelemetry-javaagent.jar
+        -Dotel.service.name=notification-service
+        -Dotel.exporter.otlp.endpoint=http://otel-collector:4318
+        -Dotel.exporter.otlp.protocol=http/protobuf
     ports:
       # only for http://localhost:9002/actuator/prometheus
       - "9002:9001"
@@ -292,20 +269,38 @@ services:
       - kafka-0
       - kafka-1
       - kafka-2
+      - otel-collector
 
   krev-service:
     build: ./krev-service
     container_name: krev-service
+    volumes:
+      - ./monitoring/opentelemetry-javaagent.jar:/otel/opentelemetry-javaagent.jar
     environment:
       SPRING_PROFILES_ACTIVE: docker
+      JAVA_TOOL_OPTIONS: >
+        -Xms256m
+        -Xmx256m
+        -Xss512k
+        -XX:CompressedClassSpaceSize=64m
+        -XX:MaxDirectMemorySize=32m
+        -XX:NativeMemoryTracking=summary
+        -XX:+UseG1GC
+        -javaagent:/otel/opentelemetry-javaagent.jar
+        -Dotel.service.name=krev-service
+        -Dotel.exporter.otlp.endpoint=http://otel-collector:4318
+        -Dotel.exporter.otlp.protocol=http/protobuf
     depends_on:
       - kafka-0
       - kafka-1
       - kafka-2
+      - otel-collector
 
   analytics-service:
     build: ./analytics-service
     container_name: analytics-service
+    volumes:
+      - ./monitoring/opentelemetry-javaagent.jar:/otel/opentelemetry-javaagent.jar
     environment:
       SPRING_PROFILES_ACTIVE: docker
       JAVA_TOOL_OPTIONS: >
@@ -316,6 +311,10 @@ services:
         -XX:MaxDirectMemorySize=32m
         -XX:NativeMemoryTracking=summary
         -XX:+UseG1GC
+        -javaagent:/otel/opentelemetry-javaagent.jar
+        -Dotel.service.name=analytics-service
+        -Dotel.exporter.otlp.endpoint=http://otel-collector:4318
+        -Dotel.exporter.otlp.protocol=http/protobuf
     deploy:
       resources:
         limits:
@@ -325,20 +324,13 @@ services:
       - kafka-0
       - kafka-1
       - kafka-2
+      - otel-collector
 
   dlt-processor-service:
     build: ./dlt-processor-service
     container_name: dlt-processor-service
-    environment:
-      SPRING_PROFILES_ACTIVE: docker
-    depends_on:
-      - kafka-0
-      - kafka-1
-      - kafka-2
-
-  user-service:
-    build: ./user-service
-    container_name: user-service
+    volumes:
+      - ./monitoring/opentelemetry-javaagent.jar:/otel/opentelemetry-javaagent.jar
     environment:
       SPRING_PROFILES_ACTIVE: docker
       JAVA_TOOL_OPTIONS: >
@@ -349,6 +341,35 @@ services:
         -XX:MaxDirectMemorySize=32m
         -XX:NativeMemoryTracking=summary
         -XX:+UseG1GC
+        -javaagent:/otel/opentelemetry-javaagent.jar
+        -Dotel.service.name=dlt-processor-service
+        -Dotel.exporter.otlp.endpoint=http://otel-collector:4318
+        -Dotel.exporter.otlp.protocol=http/protobuf
+    depends_on:
+      - kafka-0
+      - kafka-1
+      - kafka-2
+      - otel-collector
+
+  user-service:
+    build: ./user-service
+    container_name: user-service
+    volumes:
+      - ./monitoring/opentelemetry-javaagent.jar:/otel/opentelemetry-javaagent.jar
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      JAVA_TOOL_OPTIONS: >
+        -Xms128m
+        -Xmx256m
+        -Xss512k
+        -XX:CompressedClassSpaceSize=64m
+        -XX:MaxDirectMemorySize=32m
+        -XX:NativeMemoryTracking=summary
+        -XX:+UseG1GC
+        -javaagent:/otel/opentelemetry-javaagent.jar
+        -Dotel.service.name=user-service
+        -Dotel.exporter.otlp.endpoint=http://otel-collector:4318
+        -Dotel.exporter.otlp.protocol=http/protobuf
     deploy:
       resources:
         limits:
@@ -356,37 +377,9 @@ services:
           cpus: "2"
     depends_on:
       - users-postgres
-
-  prometheus:
-    image: prom/prometheus:v3.8.0
-    container_name: prometheus
-    volumes:
-      - "./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro"
-    ports:
-      - "9090:9090"
-    depends_on:
-      - order-service
-      - kafka-exporter
-      - inventory-postgres-exporter
-      - notification-postgres-exporter
-      - users-postgres-exporter
-
-  grafana:
-    image: grafana/grafana:13.0.1
-    container_name: grafana
-    volumes:
-      - "./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro"
-      - "./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro"
-      - grafana-data:/var/lib/grafana
-    environment:
-      GF_SECURITY_ADMIN_PASSWORD: admin #default password
-    ports:
-      - "3000:3000"
-    depends_on:
-      - prometheus
+      - otel-collector
 
 volumes:
   pgdata:  # Определение именованного тома
   pgdata_notification:
   pgdata_users:
-  grafana-data:

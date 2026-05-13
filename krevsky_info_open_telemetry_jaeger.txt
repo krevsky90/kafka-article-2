@@ -1,0 +1,66 @@
+info:
+https://chatgpt.com/g/g-p-69de2569c3f481918b01d49dddd12f4c-swe/c/6a035b5a-bf6c-83eb-b8de-39c2c2594d7c
+
+я - SRE/SWE, который хочет освоить OpenTelemetry и четко понимать, что значат различные метрики на дашборде для моего спрингбут приложения, какие выводы можно сделать из них и можно ли оптимизировать количество ресурсов, выделяемых для приложения. у меня есть мультимодульный мавен проект из спрингбутовых микросервисов, общающихся через очереди кафки: <modules> <module>order-service</module> <module>inventory-service</module> <module>notification-service</module> <module>analytics-service</module> <module>krev-service</module> <module>dlt-processor-service</module> </modules> order-service - это по сути точка входа с РЕСТ апи вида POST http://localhost:8081/api/order Content-Type: application/json { "email": "krevskiigrigorii@gmail.com", "productName": "Tablet", "quantity": 1 } этот сервис - продюсер для кафка. все сервисы я поднимаю локально, в докере. order-service передает сообщения в кафку, в топик с 3 партициями. а читает эти партиции inventory-service.
+затем inventory-service идет в постгрес, уменьшает значение счетчика телефонов (т.к. реквест в order-service - это заказ телефона для определенного пользователя) и отсылает сообщение в другой топик - inventory-reserved. оттуда читает сообщения notification-service, достает из сообщения email, идет по grpc в сервис user-service, который из постгреса достает информацию о юзере по email-у и отсылает обратно по grpc в notification-service. затем notification-service распечатывает инфу о юзере в консоль или логи.
+
+отправка сообщений из inventory-service в кафку происходит через outbox_pattern
+также есть дедупликация через processed_order_id таблицы в inventory-service и notification-service
+
+подскажи, можно ли наглядно встроить в мое приложение OpenTelemetry, чтобы освоить этот прием?
+
+----------
+Общая схема:
+1) service provides traces to otel-collector
+2) otel-collector aggregates, batches, does sampling, retries during sending to jaeger
+
+Как подключить jaeger и otel-collector:
+1) скачать джарник https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/tag/v2.27.0
+2) создать контейнеры jaeger и otel-collector в docker-compose
+3) создать otel-collector-config.yaml
+4) для каждого сервиса в application.properties прописать:
+    ### to use OpenTelemetry and jaeger to see traces in distributed system
+    # turn on Spring Boot 3 Micrometer Tracing (NOTE: usual value for production 0.1 .. 0.01)
+    management.tracing.sampling.probability=1
+    management.otlp.tracing.endpoint=http://otel-collector:4318/v1/traces
+    # to save trace_id and span_id
+    logging.pattern.level: "%5p [${spring.application.name:},traceId=%X{trace_id:-},spanId=%X{span_id:-}]"
+5) для контейнеров каждого сервиса добавить:
+    копирование джарника opentelemetry-javaagent.jar в контейнер
+    volumes:
+          - ./monitoring/opentelemetry-javaagent.jar:/otel/opentelemetry-javaagent.jar
+    java опции, чтобы пушить данные для трейсинга в коллектор
+      JAVA_TOOL_OPTIONS: >
+        -javaagent:/otel/opentelemetry-javaagent.jar
+        -Dotel.service.name=inventory-service
+        -Dotel.exporter.otlp.endpoint=http://otel-collector:4318
+        -Dotel.exporter.otlp.protocol=http/protobuf
+    зависимость от контейнера otel-collector:
+    depends on:
+      - otel-collector
+
+OTLP бывает двух типов
+1. gRPC - port 4317
+2. HTTP protobuf (http/protobuf) port 4318
+а порт 8889 - prometheus scrapes otel-collector:8889/metrics (т.е. метрики самого коллектора)
+
+Collector — это observability gateway
+
+-------------------------------------
+telemetry |	transport model
+-------------------------------------
+traces	  |	push
+metrics	  |	usually pull (prometheus)
+logs	  |	push
+-------------------------------------
+
+строка
+    -Dotel.exporter.otlp.protocol=http/protobuf
+говорит, какой transport protocol использовать
+
+jaeger UI: http://localhost:16686
+
+best practice:
+    выносить все observability контейнеры в отдельный docker-compose-observability.yaml файл
+    и запускать docker compose -f docker-compose.yaml -f docker-compose-observability.yaml up -d
+	Эта команда сначала мержит файлы в итоговую модель, а потом уже запускает

@@ -1,0 +1,93 @@
+services:
+  kafka-exporter:
+    image: danielqsj/kafka-exporter:v1.9.0
+    container_name: kafka-exporter
+    command:
+      - "--kafka.server=kafka-0:9091"   # connect to broker
+    ports:
+      - "9308:9308"
+    depends_on:
+      - kafka-0
+      - kafka-1
+      - kafka-2
+
+  inventory-postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:v0.19.1
+    container_name: inventory-postgres-exporter
+    environment:
+      DATA_SOURCE_NAME: "postgresql://:postgres@inventory-postgres:5432/inventory_db?sslmode=disable"
+    ports:
+      - "9187:9187"
+    depends_on:
+      - inventory-postgres
+
+  notification-postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:v0.19.1
+    container_name: notification-postgres-exporter
+    environment:
+      DATA_SOURCE_NAME: "postgresql://:postgres@notification-postgres:5432/notification_db?sslmode=disable"
+    ports:
+      - "9188:9187"
+    depends_on:
+      - notification-postgres
+
+  users-postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:v0.19.1
+    container_name: users-postgres-exporter
+    environment:
+      DATA_SOURCE_NAME: "postgresql://:postgres@users-postgres:5432/users_db?sslmode=disable"
+    ports:
+      - "9189:9187"
+    depends_on:
+      - users-postgres
+
+  prometheus:
+    image: prom/prometheus:v3.8.0
+    container_name: prometheus
+    volumes:
+      - "./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro"
+    ports:
+      - "9090:9090"
+    depends_on:
+      - kafka-exporter
+      - inventory-postgres-exporter
+      - notification-postgres-exporter
+      - users-postgres-exporter
+
+  grafana:
+    image: grafana/grafana:13.0.1
+    container_name: grafana
+    volumes:
+      - "./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro"
+      - "./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro"
+      - grafana-data:/var/lib/grafana
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: admin #default password
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.76.0
+    container_name: jaeger
+    # jaeger UI: http://localhost:16686
+    ports:
+      - "16686:16686"
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.152.0
+    container_name: otel-collector
+    command: [ "--config=/etc/otelcol/config.yaml" ]
+    volumes:
+      - ./monitoring/otel/otel-collector-config.yaml:/etc/otelcol/config.yaml
+    ports:
+      # 4318 - for HTTP protobuf
+      # 4317 - for grpc
+      # 8889 - to pull collector's metrics by Prometheus
+      - "4318:4318"
+    depends_on:
+      - jaeger
+
+volumes:
+  grafana-data:

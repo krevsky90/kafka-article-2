@@ -16,3 +16,7 @@
 
 3) как скопировать файл из контейнера на хост:
     docker cp order-service:/app/app.jar .
+
+4) как запускать сервисы, структирированные по нескольким docker-compose файлам:
+    docker compose -f docker-compose.yaml -f docker-compose-observability.yaml up -d
+	эта команда сначала мержит файлы в итоговую модель, а потом уже запускает
