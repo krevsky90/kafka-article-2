@@ -183,6 +183,8 @@ services:
       - ./monitoring/opentelemetry-javaagent.jar:/otel/opentelemetry-javaagent.jar
     environment:
       SPRING_PROFILES_ACTIVE: docker
+      OTEL_METRICS_EXPORTER: none
+      OTEL_LOGS_EXPORTER: none
       JAVA_TOOL_OPTIONS: >
         -Xms512m
         -Xmx512m
@@ -218,6 +220,8 @@ services:
       - ./monitoring/opentelemetry-javaagent.jar:/otel/opentelemetry-javaagent.jar
     environment:
       SPRING_PROFILES_ACTIVE: docker
+      OTEL_METRICS_EXPORTER: none
+      OTEL_LOGS_EXPORTER: none
       JAVA_TOOL_OPTIONS: >
         -Xms128m
         -Xmx256m
@@ -250,6 +254,8 @@ services:
       - ./monitoring/opentelemetry-javaagent.jar:/otel/opentelemetry-javaagent.jar
     environment:
       SPRING_PROFILES_ACTIVE: docker
+      OTEL_METRICS_EXPORTER: none
+      OTEL_LOGS_EXPORTER: none
       # Xss - Thread Stack Size. By default, it is 1 Mb for Tomcat's thread. but for usual CRUD app or Kafka consumer/producer it is ok to be 256k
       # -XX:+UseContainerSupport - optional for Java 10+. means JVM knows about container's limits (RAM, cpu)
       JAVA_TOOL_OPTIONS: >
@@ -287,6 +293,8 @@ services:
       - ./monitoring/opentelemetry-javaagent.jar:/otel/opentelemetry-javaagent.jar
     environment:
       SPRING_PROFILES_ACTIVE: docker
+      OTEL_METRICS_EXPORTER: none
+      OTEL_LOGS_EXPORTER: none
       JAVA_TOOL_OPTIONS: >
         -Xms256m
         -Xmx256m
@@ -313,6 +321,8 @@ services:
       - ./monitoring/opentelemetry-javaagent.jar:/otel/opentelemetry-javaagent.jar
     environment:
       SPRING_PROFILES_ACTIVE: docker
+      OTEL_METRICS_EXPORTER: none
+      OTEL_LOGS_EXPORTER: none
       JAVA_TOOL_OPTIONS: >
         -Xms128m
         -Xmx256m
@@ -344,6 +354,8 @@ services:
       - ./monitoring/opentelemetry-javaagent.jar:/otel/opentelemetry-javaagent.jar
     environment:
       SPRING_PROFILES_ACTIVE: docker
+      OTEL_METRICS_EXPORTER: none
+      OTEL_LOGS_EXPORTER: none
       JAVA_TOOL_OPTIONS: >
         -Xms128m
         -Xmx256m
@@ -370,6 +382,8 @@ services:
       - ./monitoring/opentelemetry-javaagent.jar:/otel/opentelemetry-javaagent.jar
     environment:
       SPRING_PROFILES_ACTIVE: docker
+      OTEL_METRICS_EXPORTER: none
+      OTEL_LOGS_EXPORTER: none
       JAVA_TOOL_OPTIONS: >
         -Xms128m
         -Xmx256m

@@ -58,6 +58,24 @@ logs	  |	push
     -Dotel.exporter.otlp.protocol=http/protobuf
 говорит, какой transport protocol использовать
 
+6) поскольку агент -javaagent:/otel/opentelemetry-javaagent.jar по умолчанию пытается экспортировать:
+        traces
+        metrics
+        logs
+    то, в otel-collector-config.yaml нужно настроить соответствующие pipelines
+    ИЛИ, например, если экспорт не нужен (и нет такого pipeline), то отключить этот экспорт,
+    прописав в environment сервиса
+        OTEL_METRICS_EXPORTER: none - для отключения экспорта метрик
+        OTEL_LOGS_EXPORTER: none - для отключения экспорта логов
+
+    NOTE: когда захотим экспортировать еще и метрики, допишем в otel-collector-config.yaml
+    pipelines:
+      metrics:
+          receivers: [otlp]
+          processors: [batch]
+          exporters: [debug]
+
+
 jaeger UI: http://localhost:16686
 
 best practice:
