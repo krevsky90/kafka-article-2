@@ -1,0 +1,15 @@
+После добавления concurrency = "3" в notification-service (консюмер),
+	который читает топик "inventory-reserved", состоящий из трех партиций, для notification-service:
+1) выросло Direct memory с 5.16Mib до 7.16Mib
+	Kafka client heavily uses off-heap direct buffers для network I/O, socket reads, zero-copy optimizations
+2) cpu usage колеблется от 0.2 до 0.8
+3) peak threads увеличилось с 41 до 49.
+	Это норм, т.к. каждый consumer concurrency добавляет:
+	poll thread, network activity, executor activity
+4) GC allocated (bytes allocated/sec) выросло с 200000000 до 1200000000,
+	потому что больше concurrency => больше objects, deserialization, Kafka records, JSON, futures/callbacks
+	При это если GC pauses low и heap stable, то allocations OK.
+5) hikari cp вырос с 1-2 до 3-4
+
+6) ГЛАВНОЕ!!! kafka consumer lag для топика "inventory-reserved" стал падать в 3 раза быстрее
+

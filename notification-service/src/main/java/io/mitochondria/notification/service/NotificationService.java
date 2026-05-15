@@ -23,7 +23,7 @@ public class NotificationService {
         this.userInfoClient = userInfoClient;
     }
 
-    @KafkaListener(topics = "inventory-reserved")
+    @KafkaListener(topics = "inventory-reserved", concurrency = "3")
     public void sendNotificationIfReserved(InventoryReservedEvent inventoryReservedEvent) {
         //deduplication check
         try {
