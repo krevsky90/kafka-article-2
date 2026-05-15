@@ -1,3 +1,18 @@
+NOTE:
+чтобы Docker desktop не выжирал все ресурсы на локальной машине и не уводил в swap Windows локальной машины,
+нужно создать файл .wslconfig (его упоминание и путь, куда его положить, указаны в самом Docker Desktop),
+написать в нем
+    [wsl2]
+    memory=8GB   # Ограничиваем Docker
+    processors=8 # Ограничиваем количество ядер (по желанию)
+    swap=4GB
+    pageReporting=true # позволяет WSL2 возвращать неиспользуемую память Windows
+где swap - это swap на wsl (линукс) машине, а не самом Windows
+и положить в C:\Users\YOUR_USER\
+
+Затем wsl --shutdown и запуск Docker Desktop опять.
+
+----------------------------
 Докер команды:
 1) Если изменил код сервиса inventory-service:
     # 1. Собрал jar
