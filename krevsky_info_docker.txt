@@ -18,5 +18,31 @@
     docker cp order-service:/app/app.jar .
 
 4) как запускать сервисы, структирированные по нескольким docker-compose файлам:
+    docker compose -f docker-compose.yaml -f docker-compose-observability.yaml build
     docker compose -f docker-compose.yaml -f docker-compose-observability.yaml up -d
 	эта команда сначала мержит файлы в итоговую модель, а потом уже запускает
+
+5) как понять, к какому контейнеру привязан конкретный волюм:
+    docker ps -a --filter volume=<volume_name>
+
+6) Почистить не приаттаченные волюмы:
+   	docker volume prune
+
+7) как зайти внутрь докер контейнера:
+    docker exec -it <container_name> /bin/sh
+
+8) как посмотреть логи докер-контейнера:
+    docker inspect --format='{{.LogPath}}' <container_name>
+    Результат:
+    /var/lib/docker/containers/fa26d3f27e145f4c3dc918ad92682986d9002e64ec81b78dfe869f05eebafe05/fa26d3f27e145f4c3dc918ad92682986d9002e64ec81b78dfe869f05eebafe05-json.log
+    NOTE: файл НЕ лежит в контейнере! он лежит на хосте виртуальной машины линукс (т.е. wsl 12)
+
+8.2) как оценить размер логов докер-контейнера:
+    docker logs <container_name> 2>&1 | Measure-Object -Character -Line
+    Результат:
+      Lines Words Characters Property
+      ----- ----- ---------- --------
+    1158667        233375037
+
+    т.е. 233 Мб логов
+    А Docker хранит это в json-формате с метаданными, поэтому на диске это обычно: ×1.5–3 больше. Плюс ротации/буферы
