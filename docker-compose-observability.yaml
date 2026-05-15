@@ -80,9 +80,9 @@ services:
     deploy:
       resources:
         limits:
-          memory: 512m
+          memory: 768m
         reservations:
-          memory: 256m  # "мягкий" лимит — приоритет при нехватке
+          memory: 512m  # "мягкий" лимит — приоритет при нехватке
 
   otel-collector:
     image: otel/opentelemetry-collector-contrib:0.152.0
