@@ -71,9 +71,18 @@ services:
   jaeger:
     image: jaegertracing/all-in-one:1.76.0
     container_name: jaeger
+    environment:
+      # Жёстко ограничиваем количество трассировок в памяти
+      - MEMORY_MAX_TRACES=5000  # вместо бесконечности
     # jaeger UI: http://localhost:16686
     ports:
       - "16686:16686"
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+        reservations:
+          memory: 256m  # "мягкий" лимит — приоритет при нехватке
 
   otel-collector:
     image: otel/opentelemetry-collector-contrib:0.152.0

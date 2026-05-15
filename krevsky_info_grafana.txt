@@ -98,6 +98,8 @@ info: https://chatgpt.com/g/g-p-69de2569c3f481918b01d49dddd12f4c/c/69fb104c-fa24
     Затем вставить содержимое в файл исходного дашборда в гите, вырезать id, version и запровизить заново.
     Лишние клоны удалить (если он остались после провиженинга)
 
+NOTE:
+    кастомные метрики, к-ые прикручены AOP-аннотациями типа @Timed, появляются в /actuator/prometheus ТОЛЬКО после вызова метода, над к-ым стоит аннотация!
 
 
 - - - - - - - - - - - - - - - - - - - - - - - -
@@ -127,3 +129,36 @@ info: https://chatgpt.com/g/g-p-69de2569c3f481918b01d49dddd12f4c/c/69fb104c-fa24
     docker compose restart grafana
 ЕСЛИ поменяли datasources.yml в проекте, то надо удалить контейнер и создать заново
     или (если есть) хотя бы именованный volume этого контейнера
+
+-----------------------------------
+ПРИМЕРЫ запросов PromQL:
+уровень (число, rate) ошибочных запросов за 1 мин:
+rate(http_server_requests_seconds_count{
+    application="order-service",
+    uri="/api/order",
+    status=~"5.."
+  }[1m]
+)
+
+гистограмма (сколько времени занимают 95% всех запросов к /api/order, подсчет статичтики за 1мин):
+histogram_quantile(
+  0.95,
+  sum by (le)(
+    rate(http_server_requests_seconds_bucket{
+      application="order-service",
+      uri="/api/order"
+    }[1m])
+  )
+)
+
+Кафка лаг по топику:
+kafka_consumergroup_lag{topic="order-placed"}
+
+Среднее время публикации сообщения в кафка (_sum / _count):
+rate(order_kafka_publish_duration_seconds_sum[1m]) / rate(order_kafka_publish_duration_seconds_count[1m])
+
+Суммарное (за все время существования) количество созданных ордеров:
+order_messages_sent_total{application="order-service"}
+
+Суммарное количество созданных ордеров за 1 час:
+increase(order_messages_sent_total{application="order-service"}[1h])

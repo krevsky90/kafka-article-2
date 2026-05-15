@@ -61,6 +61,20 @@ logs	  |	push
 jaeger UI: http://localhost:16686
 
 best practice:
-    выносить все observability контейнеры в отдельный docker-compose-observability.yaml файл
-    и запускать docker compose -f docker-compose.yaml -f docker-compose-observability.yaml up -d
-	Эта команда сначала мержит файлы в итоговую модель, а потом уже запускает
+    1) выносить все observability контейнеры в отдельный docker-compose-observability.yaml файл
+        и запускать
+        docker compose -f docker-compose.yaml -f docker-compose-observability.yaml build
+        docker compose -f docker-compose.yaml -f docker-compose-observability.yaml up -d
+        Эта команда сначала мержит файлы в итоговую модель, а потом уже запускает
+    2) NOTE: по умолчанию НЕТ макс ограничения трейсов, хранищихся в RAM jaeger-a,
+        поэтому он будет потреблять неограниченное кол-во памяти!
+        НАДО
+            environment:
+              # Жёстко ограничиваем количество трассировок в памяти
+              - MEMORY_MAX_TRACES=5000  # вместо бесконечности
+              deploy:
+                resources:
+                  limits:
+                    memory: 512m
+                  reservations:
+                    memory: 256m  # "мягкий" лимит — приоритет при нехватке
